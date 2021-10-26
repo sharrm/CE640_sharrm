@@ -21,6 +21,8 @@ buoy_file = fopen('hw4_data.txt');
 header1 = fgetl(buoy_file); % Store the first line in the header
 header2 = fgetl(buoy_file); % Store the second line in the header
 bdata = textscan(buoy_file,'%17c%d%f%f%f%f%f%d%f64%f%f%f%f%f'); % Use textscan to bring in values to cell array based on data type
+% I had issues with bringing date/time in as doubles, so went with
+% characters instead
 
 fclose(buoy_file); % Close the file
 
@@ -40,10 +42,11 @@ label_date_time=unique(datenum(yr,mon,day));
 %% Compute the average values for each day and in each column, then save the output file
 
 % This part is a bit of a hack in order to get the month and days into the
-% field two columns of the output array
-mon = mon(2:31); % Taking the known values in September for the file
-day = unique(day); % Stores each individual day
-day(31) = []; % excluding 31st values to account for the August entry
+% field two columns of the output array. I take the known values in September 
+% for the file, store each individual day, and remove day '31' from August.
+mon = mon(2:31); 
+day = unique(day);
+day(31) = [];
 
 for d = day(1):day(end) % Day range for the month of September
     i = find(day == d); % Find elements within the same day
@@ -51,29 +54,29 @@ for d = day(1):day(end) % Day range for the month of September
     first = i(1); % Store the first column index for the day
     last = first + s(1) - 1; % Find the last column index for the day
     
-    for c = 2:14 % Step through each column of the input Cell Array 'bdata'
-        x(d,c) = mean(bdata{c}(first:last)); % Compute the mean for each column on each day
+    % Step through each column of the input Cell Array 'bdata'
+    % Compute the mean for each column on each day
+    for c = 2:14 
+        x(d,c) = mean(bdata{c}(first:last)); 
     end
 end
 
-output = x(:,2:14); % For some reason when I compute the mean,
-% I get an extra column of 0s at the beginning. So I'm skipping the first
-% column of 'x'
+output = x(:,2:14); % When I compute the mean, I get an extra column of 0s 
+% at the beginning. So, I'm skipping the first column of 'x'
 
 concat = [mon day output]; % Combine the month, day, and mean data values
 
 remove = ["YY  " "hh " "mm " "yr  " "hr " "mn "];
 header1 = erase(header1, remove); % Modify the header to not include year or time
-header1 = strrep(header1, 'DD', ' DD')
 header2 = erase(header2, remove); % Modify the next header line to not include year and time units
-header2 = strrep(header2, 'dy', ' dy')
-header = [header1 '\n' header2 '\n'];
+headers = string([split(header1) split(header2)]); % Combine header string into array of strings for each column
 
 home
 outfile=fopen('hw4_daily_data_sharm.txt','w'); % Create the output file
-fprintf(outfile, header'); % Add the modified header to the output file
-fprintf(outfile, '%3d%3d%5.0f%6.1f%6.1f%6.1f%6.1f%6.1f%6.0f%8.1f%6.1f%6.1f%6.1f%6.1f%6.1f\n', concat'); % Add the mean data to the output file
+fprintf(outfile, '%2s%3s%6s%6s%6s%6s%6s%6s%6s%8s%6s%6s%6s%6s%6s\n', headers); % Add the headers to the output file
+fprintf(outfile, '%2d%3d%6.0f%6.1f%6.1f%6.1f%6.1f%6.1f%6.0f%8.1f%6.1f%6.1f%6.1f%6.1f%6.1f\n', concat'); % Add the mean data to the output file
 fclose(outfile); % Close the file
+
 disp(['Saved hw4_daily_data_sharm.txt to: ', pwd]) % Display the file name and location
 
 %% Find the unknown wave height values (99.00) and replace them with NaN
@@ -82,7 +85,7 @@ disp(['Saved hw4_daily_data_sharm.txt to: ', pwd]) % Display the file name and l
 wave_height = find(bdata{5} == 99.00);
 bdata{5}(wave_height) = NaN;
 
-%% Plot the data
+%% Create two separate plots for visualizing input data components
 
 f1 = figure;
 f2 = figure;
@@ -100,16 +103,16 @@ title('Stonewall Bank - Air Temperature over Time')
 figure(f2)
 hold on
 yyaxis left
-ylabel('Wind Speed (m/s)')
-scatter(date_time,bdata{3},4.5,'r') % Create a scatter plot of wind speed
+ylabel('Wind Speed (m/s)', 'Color', 'b')
+scatter(date_time,bdata{3},4.5,'b') % Create a scatter plot of wind speed
 
 yyaxis right % Create secondary y axis
-ylabel('Wave Height (m)')
-scatter(date_time,bdata{5},4.5,'b') % Create a scatter plot of wave height
+ylabel('Wave Height (m)', 'Color', 'r')
+scatter(date_time,bdata{5},4.5,'r') % Create a scatter plot of wave height
 
 set(gca,'XTick',label_date_time)
 datetick('x',6,'keepticks');
 xlabel('Month/Day')
 xtickangle(90) % Change the orientation of the x-axis labels
-legend('Wave Height','Wind Speed')
+legend('Wind Speed','Wave Height','Location','best')
 title('Stonewall Bank - Wind Speed vs Wave Height')
