@@ -1,31 +1,54 @@
+%% CE 640 - Fall 2021
+% Week 5 assignment
+% Matt Sharr (sharrm)
 
+clear all
+%% Read in .asc OR precipitation files
 
+asc_files = dir('*.asc'); % Find all ESRI .asc files in the directory
+num_files = numel(asc_files); % Find the number of .asc files
 
-% https://www.mathworks.com/help/map/ref/arcgridread.html
+%% Find size of input files
 
-% % [A,R] = arcgridread('or_precip_1983_01.asc');
-% [A,R] = readgeoraster('or_precip_1983_01.asc');
-% % mapshow(A,R,'DisplayType','surface')
-% geoshow(A,R);
-% 
-% % https://www.mathworks.com/matlabcentral/answers/515373-how-to-load-multiple-asc-file-in-matlab-which-consists-of-numbers-and-text
-% % https://www.mathworks.com/help/matlab/import_export/process-a-sequence-of-files.html
-% % https://www.mathworks.com/help/matlab/ref/dir.html
-% 
-% % Get geo referenced 
-% R = georasterref('RasterSize',size(A),'LatitudeLimits',[ymin,ymax],'LongitudeLimits',[xmin,xmax]);
-% % write to tiff file 
-% tiffile = 'test.tif' ;
-% geotiffwrite(tiffile,A,R)
-% %% Read geotiff file
-% [A, R] = geotiffread(tiffile);
+[R,H] = arcgridread(asc_files(1).name);
 
-files = dir('*.asc');
-fnames = {files.name};
-numfiles = numel(fnames);
+raster_data = zeros(size(R));
 
-for i=1:numfiles
-    [A,R] = arcgridread(fnames{i});
+%% Read all of the .asc files identified above, and store the raster and header
+% information in arrays. Plot the read files in a figure window.
+
+for i=1:num_files
+    [R,H] = arcgridread(asc_files(i).name);
+    raster_data = raster_data + R;
 end
 
-mapshow(A,R,'DisplayType','surface')
+% Convert from mm to m
+raster_data = raster_data / 1000;
+
+%% Plotting and plot formatting
+
+% Display the summarized precipition data
+f = figure()
+m = mapshow(raster_data,H, 'DisplayType', 'Surface');
+hold on
+
+% surf(raster_data,H,[],-10)
+
+% Customize plot
+% set(gca,'xticklabel',[], 'yticklabel', [],'XTick',[], 'YTick', []);
+ylabel('Latitude (N)');
+xlabel('Longitude (W)');
+title('Total Annual Precipitation (Oregon 1983)');
+f.Position = [75 75 700 400];
+cmap = colormap(turbo);
+cmap = flipud(cmap);
+colormap(cmap);
+c = colorbar;
+c.Location = 'eastoutside';
+c.Label.String = 'Precipitation (m)';
+
+% Overlay contours
+%  m = mapshow(raster_data,H,'DisplayType','contour','LineColor','k','LevelStep', 0.75, 'ShowText', 'off');
+
+% set(gca,'color','white')
+
