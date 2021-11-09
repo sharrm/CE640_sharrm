@@ -10,56 +10,55 @@ u = [57.12 75.78 83.77 89.58 94.16 97.99 100.81 102.13 102.62];
 
 % Constants
 k = 0.4; % von Karman constant
-v = 0.01; % Viscosity of water (cm^2s^-1)
+v = 0.01; % Kinematic viscosity of water (cm^2s^-1)
 
 %% Smooth Wall Model
 
-u1 = 5.5; % Initial estimated shear velocity guess
+smooth_guess = [5.5]; % Initial estimated shear velocity for the smooth model
 
 % Smooth log law
-smooth = @(u1,u) ((u1/k)*log((y*u1)/v));
-[s_beta,R,JCOVB,MSE] = nlinfit(y, u, smooth, [1]);
+smooth = @(s_vel,y) ((s_vel/k)*log((y*s_vel)/v));
+[smooth_shear_velocity,R,JCOVB,MSE] = nlinfit(y, u, smooth, smooth_guess);
 
 % Print message to the user
-disp(['1. The best estimated shear velocity for the smooth wall model is: ' num2str(s_beta) ' (m/s)'])
+disp(['a. The best estimated shear velocity for the smooth wall model is: ' num2str(smooth_shear_velocity,4) ' (cm/s)'])
 
 %% Rough Wall Model
 
-u2 = 6.1; % Initial estimated shear velocity guess
-ks = 0.1; % Initial estimated height roughness guess
+rough_guess = [5 0.1]; % Initial estimated shear velocity and height roughness
 
 % Rough log law
-rough = @(u2,u) ((u2/k)*log(y/ks)+u2*8.5);
-[r_beta,R,JCOVB,MSE] = nlinfit(y, u, rough, [1]);
+rough = @(r_vel,y) ((r_vel(1)/k)*log(y/r_vel(2))+r_vel(1)*8.5);
+[r_beta,R,JCOVB,MSE] = nlinfit(y, u, rough, rough_guess);
+
+% Storing values in more readable variables
+rough_shear_velocity = r_beta(1);
+roughness_height = r_beta(2);
 
 % Print messages to the user
-disp(['2a. The best estimated shear velocity for the rough wall model is: ' num2str(r_beta) ' (m/s)'])
-disp(['2b. The best estimated roughness height for the rough wall model is: ' num2str(MSE) ' (cm)'])
+disp(['b1. The best estimated shear velocity for the rough wall model is: ' num2str(rough_shear_velocity,4) ' (cm/s)'])
+disp(['b2. The best estimated roughness height for the rough wall model is: ' num2str(roughness_height,2) ' (cm)'])
+
+%% Finely tune the smooth and rough wall models with our computed parameters
+
+% Here, x is the set of y values in the standard smooth and rough log laws
+x = 0:0.05:3.1;
+
+u_smooth = (smooth_shear_velocity/k)*log(x*smooth_shear_velocity/v); % smooth log law
+u_rough = rough_shear_velocity *((1/k)*log(x/roughness_height)+8.5); % rough log law
 
 %% Plot the input data vs the computed best fit
 
 figure
 hold on
-scatter(y, u, 'k', 'x');
-plot(y, smooth(s_beta,u1), 'b')
-plot(y, rough(r_beta, u2), 'r')
+s = scatter(y, u, 15, 'MarkerEdgeColor', [0.2 .45 .50],...
+    'MarkerFaceColor', [0 .7 .7], 'LineWidth', 1.0);
+plot(x, u_smooth, 'Color', [0.49 0.18 0.55], 'LineWidth', 1.0)
+plot(x, u_rough, 'Color', [0.85 0.32 0.09], 'LineWidth', 1.0)
 axis([0 3.5 50 110])
-hold off
-title('Turbulet Boundary Layer Flow')
+title('Turbulet Boundary Layer Flow', 'Color', [0 0.45 0.74])
 legend('Input Data', 'Smooth Wall Fit', 'Rough Wall Fit', 'Location', 'east')
 xlabel('Depth (cm)')
-ylabel('Velocity (cm/s)')
+ylabel('Streamwise Velocity (cm/s)')
+hold off
 
-%% Delete
-% Plot the input data vs the computed best fit
-% f1 = figure;
-% figure(f1)
-% hold on
-% scatter(y, u)
-% plot(y, smooth(s_beta,u))
-% axis([0 3.5 50 110])
-% hold off
-% title('Turbulet Boundary Layer Flow - Smooth Wall Model')
-% legend('Input Data', 'Best Fit', 'Location', 'northwest')
-% xlabel('Depth (cm)')
-% ylabel('Velocity (cm/s)')
